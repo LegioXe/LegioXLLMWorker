@@ -80,4 +80,5 @@ EXPOSE 8000
 # Using a shell script (`start.sh`) is the cleanest way to manage multiple background/foreground processes.
 COPY start.sh .
 RUN chmod +x ./start.sh
+
 CMD ["./start.sh"]
