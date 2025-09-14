@@ -23,47 +23,51 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Use the official Ollama installation script for a reliable setup.
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
-# Copy the Modelfile definitions into the container.
+#
+# STAGE 2: Pre-download Model Files
+#
+# --- THE DEFINITIVE FIX ---
+# ARCHITECTURAL NOTE: Manual Download for CI/CD Robustness
+# The core issue is the unreliability of Ollama's internal downloader in a CPU-only CI environment.
+# To solve this permanently, we separate the download and creation steps. We use the robust and
+# simple 'curl' command to manually download the model's GGUF file from a stable source (Hugging Face).
+# This makes the download process explicit and removes the dependency on Ollama's client networking.
+#
+RUN mkdir -p /tmp/models
+RUN curl -L "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q5_K_M.gguf" -o /tmp/models/phi3-mini.gguf
+RUN curl -L "https://huggingface.co/microsoft/Phi-3-small-8k-instruct-gguf/resolve/main/Phi-3-small-8k-instruct-Q5_K_M.gguf" -o /tmp/models/phi3-small.gguf
+RUN curl -L "https://huggingface.co/microsoft/Phi-3-medium-4k-instruct-gguf/resolve/main/Phi-3-medium-4k-instruct-q5_K_M.gguf" -o /tmp/models/phi3-medium.gguf
+RUN curl -L "https://huggingface.co/deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf" -o /tmp/models/deepseek-coder.gguf
+
+# STAGE 3: Model Creation from Local Files
 COPY modelfiles/ /app/modelfiles
 
-#
-# STAGE 2: Model Creation (The "Baking" Process)
-#
-# --- FIX: Start the ollama server in the background OF THE SAME RUN COMMAND ---
-# ARCHITECTURAL NOTE: Self-Contained Build Step
-# This is the crucial fix. The 'ollama create' command needs a running server. By launching
-# 'ollama serve &' at the beginning of this single RUN command, we provide a temporary,
-# background server that exists only for this layer. The 'create' commands connect to it,
-# download and package the models, and then 'pkill ollama' cleanly shuts down the temporary
-# server before the layer is finalized. This makes the build process self-contained and robust.
-#
+# The 'ollama serve' is still needed for the 'create' command to function.
 RUN /bin/bash -c 'ollama serve & sleep 5 && \
-    echo "--- Creating Phi-3 Mini (3.8B) ---" && \
+    echo "--- Creating Phi-3 Mini from local file ---" && \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
-    echo "--- Creating Phi-3 Small (7B) ---" && \
+    echo "--- Creating Phi-3 Small from local file ---" && \
     ollama create ${PHI3_SMALL_MODEL} -f /app/modelfiles/Phi3Small.Modelfile && \
-    echo "--- Creating Phi-3 Medium (14B) ---" && \
+    echo "--- Creating Phi-3 Medium from local file ---" && \
     ollama create ${PHI3_MEDIUM_MODEL} -f /app/modelfiles/Phi3Medium.Modelfile && \
-    echo "--- Creating DeepSeek Coder V2 Lite (16B) ---" && \
+    echo "--- Creating DeepSeek Coder from local file ---" && \
     ollama create ${DEEPSEEK_CODER_MODEL} -f /app/modelfiles/DeepseekCoder.Modelfile && \
     pkill ollama'
 
-# STAGE 3: Application Setup
+# STAGE 4: Cleanup and Application Setup
+# Clean up the downloaded raw model files as they are now packaged by Ollama.
+RUN rm -rf /tmp/models
+
 WORKDIR /app
 COPY llm-worker-requirements.txt .
 RUN pip install --no-cache-dir -r llm-worker-requirements.txt
 COPY worker_api.py .
 
-# STAGE 4: Runtime Configuration
+# STAGE 5: Runtime Configuration
 EXPOSE 8000
 COPY start.sh .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
-COPY start.sh .
-RUN chmod +x ./start.sh
-CMD ["./start.sh"]
-
 
