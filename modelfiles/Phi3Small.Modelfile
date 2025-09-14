@@ -1,1 +1,1 @@
-FROM phi3:7b-small-instruct-4k-q5_K_M
+FROM /tmp/models/phi3-small.gguf
