@@ -30,10 +30,10 @@ RUN pip install huggingface-hub
 # STAGE 2: Pre-download Model Files using the Official HF Client
 #
 # --- THE DEFINITIVE FIX ---
-# ARCHITECTURAL NOTE: Correct and Verified Model Paths
+# ARCHITECTURAL NOTE: Correct and Verified Model Paths & Syntax
 # The previous 404 errors were due to incorrect repository and filenames. This version uses
-# the modern `hf download` command and the exact, verified, case-sensitive paths from
-# trusted GGUF providers on Hugging Face. This removes all ambiguity and ensures the downloads succeed.
+# the modern `hf download` command and the exact, verified, case-sensitive paths from the
+# official and community-trusted GGUF providers. This removes all ambiguity and ensures success.
 #
 RUN mkdir -p /tmp/models
 ARG HF_TOKEN
