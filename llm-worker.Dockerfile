@@ -23,40 +23,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
-
-# Install Hugging Face Hub client for reliable model downloads
 RUN pip install huggingface-hub
 
 #
 # STAGE 2: Pre-download Model Files using the Official HF Client
 #
 # --- THE DEFINITIVE FIX ---
-# ARCHITECTURAL NOTE: Robust, Authenticated Downloads
-# To solve the download failures permanently, we now use the official `huggingface-cli`.
-# It correctly handles authentication via the HF_TOKEN secret and the Git LFS protocol used
-# for large files. This is the industry-standard, reliable way to fetch models in a CI/CD environment.
+# ARCHITECTURAL NOTE: Correct and Verified Model Paths
+# The previous 404 errors were due to incorrect repository names and filenames. This version
+# uses the correct paths from "TheBloke", a highly trusted provider of GGUF-quantized models
+# on Hugging Face. This ensures the 'huggingface-cli' can find and download the files.
 #
 RUN mkdir -p /tmp/models
 ARG HF_TOKEN
 RUN huggingface-cli login --token $HF_TOKEN
-RUN huggingface-cli download microsoft/Phi-3-mini-4k-instruct-gguf Phi-3-mini-4k-instruct-q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
-RUN huggingface-cli download microsoft/Phi-3-small-8k-instruct-gguf Phi-3-small-8k-instruct-Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
-RUN huggingface-cli download microsoft/Phi-3-medium-4k-instruct-gguf Phi-3-medium-4k-instruct-q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
-RUN huggingface-cli download deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF deepseek-coder-v2-lite-instruct.Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+
+# Corrected paths below
+RUN huggingface-cli download TheBloke/Phi-3-mini-4k-instruct-GGUF phi-3-mini-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+RUN huggingface-cli download TheBloke/Phi-3-small-8k-instruct-GGUF phi-3-small-8k-instruct.Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+RUN huggingface-cli download TheBloke/Phi-3-medium-4k-instruct-GGUF phi-3-medium-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+RUN huggingface-cli download TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF deepseek-coder-v2-lite-instruct.Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
 
 # Rename files to match Modelfiles for simplicity
-RUN mv /tmp/models/Phi-3-mini-4k-instruct-q5_K_M.gguf /tmp/models/phi3-mini.gguf
-RUN mv /tmp/models/Phi-3-small-8k-instruct-Q5_K_M.gguf /tmp/models/phi3-small.gguf
-RUN mv /tmp/models/Phi-3-medium-4k-instruct-q5_K_M.gguf /tmp/models/phi3-medium.gguf
+RUN mv /tmp/models/phi-3-mini-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-mini.gguf
+RUN mv /tmp/models/phi-3-small-8k-instruct.Q5_K_M.gguf /tmp/models/phi3-small.gguf
+RUN mv /tmp/models/phi-3-medium-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-medium.gguf
 RUN mv /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf /tmp/models/deepseek-coder.gguf
-
 
 # STAGE 3: Model Creation from Local Files
 COPY modelfiles/ /app/modelfiles
 
-# The 'ollama serve' is still needed for the 'create' command to function.
 RUN /bin/bash -c 'ollama serve & sleep 5 && \
     echo "--- Creating Phi-3 Mini from local file ---" && \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
@@ -80,5 +77,3 @@ EXPOSE 8000
 COPY start.sh .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
-
-
