@@ -39,6 +39,11 @@ RUN mkdir -p /tmp/models
 ARG HF_TOKEN
 RUN hf auth login --token $HF_TOKEN
 
+# --- DIAGNOSTIC STEP: Test the URL directly with curl ---
+RUN echo "Attempting to fetch headers from Hugging Face URL..." && \
+    curl --head --fail --location "https://huggingface.co/TheBloke/Phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct-q5_k_m.gguf"
+
+
 # CORRECTED COMMANDS: Use all lowercase for the .gguf filenames.
 RUN hf download TheBloke/Phi-3-mini-4k-instruct-GGUF phi-3-mini-4k-instruct-q5_k_m.gguf --local-dir /tmp/models
 RUN hf download TheBloke/Phi-3-small-8k-instruct-GGUF phi-3-small-8k-instruct-q5_k_m.gguf --local-dir /tmp/models
@@ -79,3 +84,4 @@ EXPOSE 8000
 COPY start.sh .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
+
