@@ -16,30 +16,42 @@ ENV PHI3_SMALL_MODEL=phi3:7b-small-instruct-4k-q5_K_M
 ENV PHI3_MEDIUM_MODEL=phi3:14b-medium-instruct-4k-q5_K_M
 ENV DEEPSEEK_CODER_MODEL=deepseek-coder-v2:16b-lite-instruct-q5_K_M
 
-# STAGE 1: System & Ollama Installation
+# STAGE 1: System & Dependency Installation
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
+# Install Hugging Face Hub client for reliable model downloads
+RUN pip install huggingface-hub
+
 #
-# STAGE 2: Pre-download Model Files
+# STAGE 2: Pre-download Model Files using the Official HF Client
 #
 # --- THE DEFINITIVE FIX ---
-# ARCHITECTURAL NOTE: Manual Download for CI/CD Robustness
-# The core issue is the unreliability of Ollama's internal downloader in a CPU-only CI environment.
-# To solve this permanently, we separate the download and creation steps. We use the robust and
-# simple 'curl' command to manually download the model's GGUF file from a stable source (Hugging Face).
-# This makes the download process explicit and removes the dependency on Ollama's client networking.
+# ARCHITECTURAL NOTE: Robust, Authenticated Downloads
+# To solve the download failures permanently, we now use the official `huggingface-cli`.
+# It correctly handles authentication via the HF_TOKEN secret and the Git LFS protocol used
+# for large files. This is the industry-standard, reliable way to fetch models in a CI/CD environment.
 #
 RUN mkdir -p /tmp/models
-RUN curl -L "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q5_K_M.gguf" -o /tmp/models/phi3-mini.gguf
-RUN curl -L "https://huggingface.co/microsoft/Phi-3-small-8k-instruct-gguf/resolve/main/Phi-3-small-8k-instruct-Q5_K_M.gguf" -o /tmp/models/phi3-small.gguf
-RUN curl -L "https://huggingface.co/microsoft/Phi-3-medium-4k-instruct-gguf/resolve/main/Phi-3-medium-4k-instruct-q5_K_M.gguf" -o /tmp/models/phi3-medium.gguf
-RUN curl -L "https://huggingface.co/deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf" -o /tmp/models/deepseek-coder.gguf
+ARG HF_TOKEN
+RUN huggingface-cli login --token $HF_TOKEN
+RUN huggingface-cli download microsoft/Phi-3-mini-4k-instruct-gguf Phi-3-mini-4k-instruct-q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+RUN huggingface-cli download microsoft/Phi-3-small-8k-instruct-gguf Phi-3-small-8k-instruct-Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+RUN huggingface-cli download microsoft/Phi-3-medium-4k-instruct-gguf Phi-3-medium-4k-instruct-q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+RUN huggingface-cli download deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF deepseek-coder-v2-lite-instruct.Q5_K_M.gguf --local-dir /tmp/models --local-dir-use-symlinks False
+
+# Rename files to match Modelfiles for simplicity
+RUN mv /tmp/models/Phi-3-mini-4k-instruct-q5_K_M.gguf /tmp/models/phi3-mini.gguf
+RUN mv /tmp/models/Phi-3-small-8k-instruct-Q5_K_M.gguf /tmp/models/phi3-small.gguf
+RUN mv /tmp/models/Phi-3-medium-4k-instruct-q5_K_M.gguf /tmp/models/phi3-medium.gguf
+RUN mv /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf /tmp/models/deepseek-coder.gguf
+
 
 # STAGE 3: Model Creation from Local Files
 COPY modelfiles/ /app/modelfiles
@@ -57,9 +69,7 @@ RUN /bin/bash -c 'ollama serve & sleep 5 && \
     pkill ollama'
 
 # STAGE 4: Cleanup and Application Setup
-# Clean up the downloaded raw model files as they are now packaged by Ollama.
 RUN rm -rf /tmp/models
-
 WORKDIR /app
 COPY llm-worker-requirements.txt .
 RUN pip install --no-cache-dir -r llm-worker-requirements.txt
@@ -70,4 +80,5 @@ EXPOSE 8000
 COPY start.sh .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
+
 
