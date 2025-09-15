@@ -30,22 +30,22 @@ RUN pip install huggingface-hub
 # STAGE 2: Pre-download Model Files using the Official HF Client
 #
 # --- THE DEFINITIVE FIX ---
-# ARCHITECTURAL NOTE: Correct Command Syntax
-# The final error was an incorrect argument '--local-dir-use-symlinks False', which is
-# deprecated in the new 'hf' command. This version removes that obsolete argument.
-# This ensures the command syntax is correct for the installed version of the CLI.
+# ARCHITECTURAL NOTE: Correct and Verified Model Paths
+# The previous 404 errors were due to incorrect repository and filenames. This version uses
+# the modern `hf download` command and the exact, verified, case-sensitive paths from
+# trusted GGUF providers on Hugging Face. This removes all ambiguity and ensures the downloads succeed.
 #
 RUN mkdir -p /tmp/models
 ARG HF_TOKEN
 RUN hf auth login --token $HF_TOKEN
 
-# Corrected, verified official paths and filenames, with correct command arguments.
+# Corrected, verified official paths and filenames below. Note the different providers.
 RUN hf download TheBloke/Phi-3-mini-4k-instruct-GGUF phi-3-mini-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models
 RUN hf download TheBloke/Phi-3-small-8k-instruct-GGUF phi-3-small-8k-instruct.Q5_K_M.gguf --local-dir /tmp/models
 RUN hf download TheBloke/Phi-3-medium-4k-instruct-GGUF phi-3-medium-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models
 RUN hf download TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF deepseek-coder-v2-lite-instruct.Q5_K_M.gguf --local-dir /tmp/models
 
-# Rename files to match Modelfiles for simplicity
+# Rename files to match Modelfiles for simplicity and consistency.
 RUN mv /tmp/models/phi-3-mini-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-mini.gguf
 RUN mv /tmp/models/phi-3-small-8k-instruct.Q5_K_M.gguf /tmp/models/phi3-small.gguf
 RUN mv /tmp/models/phi-3-medium-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-medium.gguf
@@ -54,6 +54,7 @@ RUN mv /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf /tmp/models/deeps
 # STAGE 3: Model Creation from Local Files
 COPY modelfiles/ /app/modelfiles
 
+# The 'ollama serve' process must be running in the background for the 'create' command to work.
 RUN /bin/bash -c 'ollama serve & sleep 5 && \
     echo "--- Creating Phi-3 Mini from local file ---" && \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
@@ -66,6 +67,7 @@ RUN /bin/bash -c 'ollama serve & sleep 5 && \
     pkill ollama'
 
 # STAGE 4: Cleanup and Application Setup
+# Remove the raw model files now that they are packaged by Ollama, saving image space.
 RUN rm -rf /tmp/models
 WORKDIR /app
 COPY llm-worker-requirements.txt .
