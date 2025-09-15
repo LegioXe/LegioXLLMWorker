@@ -35,22 +35,35 @@ RUN pip install huggingface-hub
 # the modern `hf download` command and the exact, verified, case-sensitive paths from the
 # official and community-trusted GGUF providers. This removes all ambiguity and ensures success.
 #
+
 RUN mkdir -p /tmp/models
 ARG HF_TOKEN
+# We still run login for other tools, but the ARG is now used by curl.
 RUN hf auth login --token $HF_TOKEN
 
-# --- DIAGNOSTIC STEP: Test the URL directly with curl ---
-RUN echo "Attempting to fetch headers from Hugging Face URL..." && \
-    curl --head --fail --location "https://huggingface.co/TheBloke/Phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct-q5_k_m.gguf"
+# --- Using authenticated curl to download files ---
+# The -H "Authorization: Bearer $HF_TOKEN" header passes the required credentials.
+RUN echo "Downloading Phi-3 Mini..." && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+    "https://huggingface.co/TheBloke/Phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct-q5_k_m.gguf" \
+    --output /tmp/models/phi-3-mini-4k-instruct-q5_k_m.gguf
 
+RUN echo "Downloading Phi-3 Small..." && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+    "https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct-q5_k_m.gguf" \
+    --output /tmp/models/phi-3-small-8k-instruct-q5_k_m.gguf
 
-# CORRECTED COMMANDS: Use all lowercase for the .gguf filenames.
-RUN hf download TheBloke/Phi-3-mini-4k-instruct-GGUF phi-3-mini-4k-instruct-q5_k_m.gguf --local-dir /tmp/models
-RUN hf download TheBloke/Phi-3-small-8k-instruct-GGUF phi-3-small-8k-instruct-q5_k_m.gguf --local-dir /tmp/models
-RUN hf download TheBloke/Phi-3-medium-4k-instruct-GGUF phi-3-medium-4k-instruct-q5_k_m.gguf --local-dir /tmp/models
-RUN hf download TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF deepseek-coder-v2-lite-instruct-q5_k_m.gguf --local-dir /tmp/models
+RUN echo "Downloading Phi-3 Medium..." && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+    "https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct-q5_k_m.gguf" \
+    --output /tmp/models/phi-3-medium-4k-instruct-q5_k_m.gguf
 
-# CORRECTED COMMANDS: Rename the downloaded lowercase files.
+RUN echo "Downloading DeepSeek Coder..." && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+    "https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct-q5_k_m.gguf" \
+    --output /tmp/models/deepseek-coder-v2-lite-instruct-q5_k_m.gguf
+
+# Rename files to match Modelfiles for simplicity and consistency.
 RUN mv /tmp/models/phi-3-mini-4k-instruct-q5_k_m.gguf /tmp/models/phi3-mini.gguf
 RUN mv /tmp/models/phi-3-small-8k-instruct-q5_k_m.gguf /tmp/models/phi3-small.gguf
 RUN mv /tmp/models/phi-3-medium-4k-instruct-q5_k_m.gguf /tmp/models/phi3-medium.gguf
@@ -84,4 +97,3 @@ EXPOSE 8000
 COPY start.sh .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
-
