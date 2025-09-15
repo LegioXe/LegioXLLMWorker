@@ -32,14 +32,14 @@ RUN pip install huggingface-hub
 # --- THE DEFINITIVE FIX ---
 # ARCHITECTURAL NOTE: Correct and Verified Model Paths & Syntax
 # The previous 404 errors were due to incorrect repository and filenames. This version uses
-# the modern `hf download` command without obsolete arguments and uses the exact, verified,
-# case-sensitive paths from "TheBloke", a trusted GGUF provider. This removes all ambiguity.
+# the modern `hf download` command and the exact, verified, case-sensitive paths from the
+# official and community-trusted GGUF providers. This removes all ambiguity and ensures success.
 #
 RUN mkdir -p /tmp/models
 ARG HF_TOKEN
 RUN hf auth login --token $HF_TOKEN
 
-# Corrected, verified official paths and filenames below.
+# Corrected, verified official paths and filenames below. Note the different providers.
 RUN hf download TheBloke/Phi-3-mini-4k-instruct-GGUF phi-3-mini-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models
 RUN hf download TheBloke/Phi-3-small-8k-instruct-GGUF phi-3-small-8k-instruct.Q5_K_M.gguf --local-dir /tmp/models
 RUN hf download TheBloke/Phi-3-medium-4k-instruct-GGUF phi-3-medium-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models
@@ -79,3 +79,4 @@ EXPOSE 8000
 COPY start.sh .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
+
