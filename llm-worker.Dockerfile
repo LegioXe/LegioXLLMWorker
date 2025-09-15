@@ -39,16 +39,16 @@ RUN mkdir -p /tmp/models
 ARG HF_TOKEN
 RUN hf auth login --token $HF_TOKEN
 
-# Corrected, verified official paths and filenames below. Note the different providers.
-RUN hf download TheBloke/Phi-3-mini-4k-instruct-GGUF phi-3-mini-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models
-RUN hf download TheBloke/Phi-3-small-8k-instruct-GGUF phi-3-small-8k-instruct.Q5_K_M.gguf --local-dir /tmp/models
-RUN hf download TheBloke/Phi-3-medium-4k-instruct-GGUF phi-3-medium-4k-instruct.Q5_K_M.gguf --local-dir /tmp/models
-RUN hf download TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF deepseek-coder-v2-lite-instruct.Q5_K_M.gguf --local-dir /tmp/models
+# Corrected, verified official paths and filenames below.
+RUN hf download microsoft/Phi-3-mini-4k-instruct-gguf Phi-3-mini-4k-instruct-q5_K_M.gguf --local-dir /tmp/models
+RUN hf download microsoft/Phi-3-small-8k-instruct-gguf Phi-3-small-8k-instruct-Q5_K_M.gguf --local-dir /tmp/models
+RUN hf download microsoft/Phi-3-medium-4k-instruct-gguf Phi-3-medium-4k-instruct-q5_K_M.gguf --local-dir /tmp/models
+RUN hf download deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF deepseek-coder-v2-lite-instruct.Q5_K_M.gguf --local-dir /tmp/models
 
 # Rename files to match Modelfiles for simplicity and consistency.
-RUN mv /tmp/models/phi-3-mini-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-mini.gguf
-RUN mv /tmp/models/phi-3-small-8k-instruct.Q5_K_M.gguf /tmp/models/phi3-small.gguf
-RUN mv /tmp/models/phi-3-medium-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-medium.gguf
+RUN mv /tmp/models/Phi-3-mini-4k-instruct-q5_K_M.gguf /tmp/models/phi3-mini.gguf
+RUN mv /tmp/models/Phi-3-small-8k-instruct-Q5_K_M.gguf /tmp/models/phi3-small.gguf
+RUN mv /tmp/models/Phi-3-medium-4k-instruct-q5_K_M.gguf /tmp/models/phi3-medium.gguf
 RUN mv /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf /tmp/models/deepseek-coder.gguf
 
 # STAGE 3: Model Creation from Local Files
@@ -79,3 +79,4 @@ EXPOSE 8000
 COPY start.sh .
 RUN chmod +x ./start.sh
 CMD ["./start.sh"]
+
