@@ -41,31 +41,38 @@ ARG HF_TOKEN
 # We still run login for other tools, but the ARG is now used by curl.
 RUN hf auth login --token $HF_TOKEN
 
-RUN echo "Downloading Phi-3 Mini from new provider..." && \
-    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
-    "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct.Q5_K_M.gguf" \
-    --output /tmp/models/phi-3-mini-4k-instruct.Q5_K_M.gguf
+# --- DEEP DIAGNOSTIC STEP ---
+# This command uses verbose mode (-v) to trace the entire network request.
+# It will print a lot of information to help us find the point of failure.
+RUN echo "--- Running Verbose Network Diagnostic ---" && \
+    curl -vL -H "Authorization: Bearer $HF_TOKEN" \
+    "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct.Q5_K_M.gguf" 2>&1
 
-RUN echo "Downloading Phi-3 Small..." && \
-    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
-    "https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.Q5_K_M.gguf" \
-    --output /tmp/models/phi-3-small-8k-instruct.Q5_K_M.gguf
+# RUN echo "Downloading Phi-3 Mini from new provider..." && \
+ #   curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+  #  "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct.Q5_K_M.gguf" \
+   # --output /tmp/models/phi-3-mini-4k-instruct.Q5_K_M.gguf
 
-RUN echo "Downloading Phi-3 Medium..." && \
-    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
-    "https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.Q5_K_M.gguf" \
-    --output /tmp/models/phi-3-medium-4k-instruct.Q5_K_M.gguf
+#R UN echo "Downloading Phi-3 Small..." && \
+ #   curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+  #  "https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.Q5_K_M.gguf" \
+   # --output /tmp/models/phi-3-small-8k-instruct.Q5_K_M.gguf
 
-RUN echo "Downloading DeepSeek Coder..." && \
-    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
-    "https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf" \
-    --output /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf
+#RUN echo "Downloading Phi-3 Medium..." && \
+#    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+#    "https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.Q5_K_M.gguf" \
+#    --output /tmp/models/phi-3-medium-4k-instruct.Q5_K_M.gguf
+
+#RUN echo "Downloading DeepSeek Coder..." && \
+#    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" \
+#    "https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf" \
+#    --output /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf
 
 # Rename files to match your Modelfiles for simplicity and consistency.
-RUN mv /tmp/models/phi-3-mini-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-mini.gguf
-RUN mv /tmp/models/phi-3-small-8k-instruct.Q5_K_M.gguf /tmp/models/phi3-small.gguf
-RUN mv /tmp/models/phi-3-medium-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-medium.gguf
-RUN mv /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf /tmp/models/deepseek-coder.gguf
+#RUN mv /tmp/models/phi-3-mini-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-mini.gguf
+#RUN mv /tmp/models/phi-3-small-8k-instruct.Q5_K_M.gguf /tmp/models/phi3-small.gguf
+#RUN mv /tmp/models/phi-3-medium-4k-instruct.Q5_K_M.gguf /tmp/models/phi3-medium.gguf
+#RUN mv /tmp/models/deepseek-coder-v2-lite-instruct.Q5_K_M.gguf /tmp/models/deepseek-coder.gguf
 
 # STAGE 3: Model Creation from Local Files
 COPY modelfiles/ /app/modelfiles
