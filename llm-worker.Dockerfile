@@ -26,7 +26,6 @@ COPY modelfiles/ /app/modelfiles/
 # STAGE 2: Pre-download and Create Models
 RUN mkdir -p /tmp/models && \
     # --- STEP 1: Download all models first. ---
-    # The '&&' ensures each download must succeed before the next one starts.
     echo "--- Downloading Phi-3 Mini ---" && \
     curl --fail -L "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf" -o /tmp/models/phi3-mini.gguf && \
     echo "--- Downloading Phi-3 Small ---" && \
@@ -43,7 +42,7 @@ RUN mkdir -p /tmp/models && \
     echo "--- Creating Phi-3 Small model ---" && \
     ollama create ${PHI3_SMALL_MODEL} -f /app/modelfiles/Phi3Small.Modelfile && \
     echo "--- Creating Phi-3 Medium model ---" && \
-    ollama create ${PHI3_MEDIUM_MODEL} -f /app/modelfiles/Phi3Medium.Modile && \
+    ollama create ${PHI3_MEDIUM_MODEL} -f /app/modelfiles/Phi3Medium.Modelfile && \
     echo "--- Creating DeepSeek Coder model ---" && \
     ollama create ${DEEPSEEK_CODER_MODEL} -f /app/modelfiles/DeepseekCoder.Modelfile && \
     \
@@ -60,4 +59,5 @@ RUN chmod +x ./start.sh
 
 EXPOSE 8000
 CMD ["./start.sh"]
+
 
