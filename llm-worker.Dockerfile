@@ -4,30 +4,33 @@
 # compatibility issues between the OS, the drivers, and the model serving framework.
 # llm-worker.Dockerfile
 
-# STAGE 1: Base Image and System Dependencies
-FROM runpod/pytorch:2.2.0-py3.10-cuda12.1.1-devel-ubuntu22.04
-LABEL maintainer="AIOS Project"
-LABEL description="A high-performance LLM worker for AIOS, serving multiple models via Ollama. Models are pre-pulled to minimize cold starts."
-ENV DEBIAN_FRONTEND=noninteractive
+# ==============================================================================
+# STAGE 1: The "Builder" Stage
+# This stage does all the heavy lifting: downloading models and creating them.
+# Its contents will be discarded, except for the final Ollama models directory.
+# ==============================================================================
+FROM runpod/pytorch:2.2.0-py3.10-cuda12.1.1-devel-ubuntu22.04 as builder
 
-# Add the build argument for the token
+LABEL maintainer="AIOS Project"
+ENV DEBIAN_FRONTEND=noninteractive
 ARG HF_TOKEN
 
-# Use all lowercase for Ollama model tags
+# Set model names for Ollama create command
 ENV PHI3_MINI_MODEL=phi3:3.8b-mini-instruct-4k-q5_k_m
 ENV PHI3_SMALL_MODEL=phi3:7b-small-instruct-4k-q5_k_m
 ENV PHI3_MEDIUM_MODEL=phi3:14b-medium-instruct-4k-q5_k_m
 ENV DEEPSEEK_CODER_MODEL=deepseek-coder-v2:16b-lite-instruct-q5_k_m
 
+# Install dependencies needed for the build stage
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     curl -fsSL https://ollama.com/install.sh | sh
 
+# Copy only the modelfiles needed for creation
 WORKDIR /app
 COPY modelfiles/ /app/modelfiles/
 
-# STAGE 2: Pre-download and Create Models
-# CORRECTED: Added the Authorization header back to all curl commands
+# Download, create models, and then clean up the raw downloads
 RUN /bin/bash -c "set -e && \
     mkdir -p /tmp/models && \
     echo '--- Downloading Models ---' && \
@@ -48,7 +51,28 @@ RUN /bin/bash -c "set -e && \
     pkill ollama && \
     rm -rf /tmp/models"
 
-# STAGE 3: Final Application Setup
+
+# ==============================================================================
+# STAGE 2: The Final, Lean Image
+# This stage starts from a fresh base image and copies ONLY the essential files
+# from the builder stage, resulting in a much smaller and cleaner final image.
+# ==============================================================================
+FROM runpod/pytorch:2.2.0-py3.10-cuda12.1.1-devel-ubuntu22.04
+
+LABEL maintainer="AIOS Project"
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Ollama again in the final image
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    curl -fsSL https://ollama.com/install.sh | sh
+
+# Copy the pre-built Ollama models from the builder stage.
+# This is the key step that saves space and time.
+COPY --from=builder /root/.ollama/models /root/.ollama/models
+
+# Copy the final application code and dependencies
+WORKDIR /app
 COPY llm-worker-requirements.txt .
 RUN pip install --no-cache-dir -r llm-worker-requirements.txt
 COPY worker_api.py .
