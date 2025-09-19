@@ -10,6 +10,9 @@ LABEL maintainer="AIOS Project"
 LABEL description="A high-performance LLM worker for AIOS, serving multiple models via Ollama. Models are pre-pulled to minimize cold starts."
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Add the build argument for the token
+ARG HF_TOKEN
+
 # Use all lowercase for Ollama model tags
 ENV PHI3_MINI_MODEL=phi3:3.8b-mini-instruct-4k-q5_k_m
 ENV PHI3_SMALL_MODEL=phi3:7b-small-instruct-4k-q5_k_m
@@ -24,14 +27,14 @@ WORKDIR /app
 COPY modelfiles/ /app/modelfiles/
 
 # STAGE 2: Pre-download and Create Models
-# CORRECTED: Use double quotes for the bash command to allow variable expansion
+# CORRECTED: Added the Authorization header back to all curl commands
 RUN /bin/bash -c "set -e && \
     mkdir -p /tmp/models && \
     echo '--- Downloading Models ---' && \
-    curl --fail -L 'https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf' -o /tmp/models/phi3-mini.gguf && \
-    curl --fail -L 'https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-small.gguf && \
-    curl --fail -L 'https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-medium.gguf && \
-    curl --fail -L 'https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.q5_k_m.gguf' -o /tmp/models/deepseek-coder.gguf && \
+    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf' -o /tmp/models/phi3-mini.gguf && \
+    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-small.gguf && \
+    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-medium.gguf && \
+    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.q5_k_m.gguf' -o /tmp/models/deepseek-coder.gguf && \
     \
     echo '--- Creating Ollama models ---' && \
     ollama serve & \
@@ -54,4 +57,3 @@ RUN chmod +x ./start.sh
 
 EXPOSE 8000
 CMD ["./start.sh"]
-
