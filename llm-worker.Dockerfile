@@ -20,20 +20,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     curl -fsSL https://ollama.com/install.sh | sh
 
+# CORRECTED: Copy modelfiles in BEFORE they are needed by the ollama create command.
+WORKDIR /app
+COPY modelfiles/ /app/modelfiles/
+
 # STAGE 2: Pre-download and Create Models
-# This single RUN command downloads all models, creates them with Ollama, and then cleans up.
-# This is more efficient for Docker layer caching.
 RUN mkdir -p /tmp/models && \
-    # Download all models using correct, verified, case-sensitive filenames
+    # Download all models
     echo "--- Downloading Phi-3 Mini ---" && \
     curl --fail -L "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf" -o /tmp/models/phi3-mini.gguf && \
-    \
     echo "--- Downloading Phi-3 Small ---" && \
     curl --fail -L "https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf" -o /tmp/models/phi3-small.gguf && \
-    \
     echo "--- Downloading Phi-3 Medium ---" && \
     curl --fail -L "https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf" -o /tmp/models/phi3-medium.gguf && \
-    \
     echo "--- Downloading DeepSeek Coder ---" && \
     curl --fail -L "https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.q5_k_m.gguf" -o /tmp/models/deepseek-coder.gguf && \
     \
@@ -41,24 +40,20 @@ RUN mkdir -p /tmp/models && \
     ollama serve & sleep 5 && \
     echo "--- Creating Phi-3 Mini model ---" && \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
-    \
     echo "--- Creating Phi-3 Small model ---" && \
     ollama create ${PHI3_SMALL_MODEL} -f /app/modelfiles/Phi3Small.Modelfile && \
-    \
     echo "--- Creating Phi-3 Medium model ---" && \
     ollama create ${PHI3_MEDIUM_MODEL} -f /app/modelfiles/Phi3Medium.Modelfile && \
-    \
     echo "--- Creating DeepSeek Coder model ---" && \
     ollama create ${DEEPSEEK_CODER_MODEL} -f /app/modelfiles/DeepseekCoder.Modelfile && \
     \
-    # Stop the Ollama server and clean up the raw files to save image space
+    # Stop the Ollama server and clean up the raw files
     pkill ollama && \
     rm -rf /tmp/models
 
 # STAGE 3: Final Application Setup
-WORKDIR /app
-COPY modelfiles/ /app/modelfiles/
-COPY llm-worker-requirements.txt.txt llm-worker-requirements.txt
+# CORRECTED: The source filename is llm-worker-requirements.txt, not llm-worker-requirements.txt.txt
+COPY llm-worker-requirements.txt .
 RUN pip install --no-cache-dir -r llm-worker-requirements.txt
 COPY worker_api.py .
 COPY start.sh .
