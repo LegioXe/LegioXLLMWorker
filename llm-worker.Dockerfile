@@ -10,6 +10,9 @@ LABEL maintainer="AIOS Project"
 LABEL description="A high-performance LLM worker for AIOS, serving multiple models via Ollama. Models are pre-pulled to minimize cold starts."
 ENV DEBIAN_FRONTEND=noninteractive
 
+# CORRECTED: Add the build argument for the token
+ARG HF_TOKEN
+
 # Set model names for Ollama create command
 ENV PHI3_MINI_MODEL=phi3:3.8b-mini-instruct-4k-q5_k_m
 ENV PHI3_SMALL_MODEL=phi3:7b-small-instruct-4k-q5_k_m
@@ -25,17 +28,17 @@ COPY modelfiles/ /app/modelfiles/
 
 # STAGE 2: Pre-download and Create Models
 RUN mkdir -p /tmp/models && \
-    # --- STEP 1: Download all models first. ---
+    # --- STEP 1: Download all models first with authentication ---
     echo "--- Downloading Phi-3 Mini ---" && \
-    curl --fail -L "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf" -o /tmp/models/phi3-mini.gguf && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf" -o /tmp/models/phi3-mini.gguf && \
     echo "--- Downloading Phi-3 Small ---" && \
-    curl --fail -L "https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf" -o /tmp/models/phi3-small.gguf && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" "https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf" -o /tmp/models/phi3-small.gguf && \
     echo "--- Downloading Phi-3 Medium ---" && \
-    curl --fail -L "https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf" -o /tmp/models/phi3-medium.gguf && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" "https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf" -o /tmp/models/phi3-medium.gguf && \
     echo "--- Downloading DeepSeek Coder ---" && \
-    curl --fail -L "https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.q5_k_m.gguf" -o /tmp/models/deepseek-coder.gguf && \
+    curl --fail -L -H "Authorization: Bearer $HF_TOKEN" "https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.q5_k_m.gguf" -o /tmp/models/deepseek-coder.gguf && \
     \
-    # --- STEP 2: Only after all downloads are complete, create the models. ---
+    # --- STEP 2: Create the models ---
     ollama serve & sleep 5 && \
     echo "--- Creating Phi-3 Mini model ---" && \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
@@ -46,7 +49,7 @@ RUN mkdir -p /tmp/models && \
     echo "--- Creating DeepSeek Coder model ---" && \
     ollama create ${DEEPSEEK_CODER_MODEL} -f /app/modelfiles/DeepseekCoder.Modelfile && \
     \
-    # --- STEP 3: Stop the server and clean up. ---
+    # --- STEP 3: Stop the server and clean up ---
     pkill ollama && \
     rm -rf /tmp/models
 
@@ -59,5 +62,3 @@ RUN chmod +x ./start.sh
 
 EXPOSE 8000
 CMD ["./start.sh"]
-
-
