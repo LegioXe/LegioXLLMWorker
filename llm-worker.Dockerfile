@@ -19,7 +19,6 @@ ARG HF_TOKEN
 ENV PHI3_MINI_MODEL=phi3:3.8b-mini-instruct-4k-q5_k_m
 ENV PHI3_SMALL_MODEL=phi3:7b-small-instruct-4k-q5_k_m
 ENV PHI3_MEDIUM_MODEL=phi3:14b-medium-instruct-4k-q5_k_m
-ENV DEEPSEEK_CODER_MODEL=deepseek-coder-v2:16b-lite-instruct-q5_k_m
 
 # Install dependencies needed for the build stage
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
@@ -37,7 +36,6 @@ RUN /bin/bash -c "set -e && \
     curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf' -o /tmp/models/phi3-mini.gguf && \
     curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-small.gguf && \
     curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-medium.gguf && \
-    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct.q5_k_m.gguf' -o /tmp/models/deepseek-coder.gguf && \
     \
     echo '--- Creating Ollama models ---' && \
     ollama serve & \
@@ -45,7 +43,6 @@ RUN /bin/bash -c "set -e && \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
     ollama create ${PHI3_SMALL_MODEL} -f /app/modelfiles/Phi3Small.Modelfile && \
     ollama create ${PHI3_MEDIUM_MODEL} -f /app/modelfiles/Phi3Medium.Modelfile && \
-    ollama create ${DEEPSEEK_CODER_MODEL} -f /app/modelfiles/DeepseekCoder.Modelfile && \
     \
     echo '--- Cleanup ---' && \
     pkill ollama && \
@@ -81,3 +78,4 @@ RUN chmod +x ./start.sh
 
 EXPOSE 8000
 CMD ["./start.sh"]
+
