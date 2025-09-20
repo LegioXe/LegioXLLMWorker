@@ -6,8 +6,6 @@
 
 # ==============================================================================
 # STAGE 1: The "Builder" Stage
-# This stage does all the heavy lifting: downloading models and creating them.
-# Its contents will be discarded, except for the final Ollama models directory.
 # ==============================================================================
 FROM runpod/pytorch:2.2.0-py3.10-cuda12.1.1-devel-ubuntu22.04 as builder
 
@@ -25,11 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     curl -fsSL https://ollama.com/install.sh | sh
 
-# Copy only the modelfiles needed for creation
 WORKDIR /app
 COPY modelfiles/ /app/modelfiles/
 
-# Download, create models, and then clean up the raw downloads
+# Download, create models, and then clean up
 RUN /bin/bash -c "set -e && \
     mkdir -p /tmp/models && \
     echo '--- Downloading Models ---' && \
@@ -39,7 +36,14 @@ RUN /bin/bash -c "set -e && \
     \
     echo '--- Creating Ollama models ---' && \
     ollama serve & \
-    sleep 5 && \
+    \
+    # CORRECTED: Actively wait for the server to be ready instead of a fixed sleep
+    echo 'Waiting for Ollama server to start...' && \
+    while ! curl -s -f http://127.0.0.1:11434/ > /dev/null; do \
+        echo -n '.' && sleep 1; \
+    done && \
+    echo 'Ollama server is ready.' && \
+    \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
     ollama create ${PHI3_SMALL_MODEL} -f /app/modelfiles/Phi3Small.Modelfile && \
     ollama create ${PHI3_MEDIUM_MODEL} -f /app/modelfiles/Phi3Medium.Modelfile && \
@@ -51,8 +55,6 @@ RUN /bin/bash -c "set -e && \
 
 # ==============================================================================
 # STAGE 2: The Final, Lean Image
-# This stage starts from a fresh base image and copies ONLY the essential files
-# from the builder stage, resulting in a much smaller and cleaner final image.
 # ==============================================================================
 FROM runpod/pytorch:2.2.0-py3.10-cuda12.1.1-devel-ubuntu22.04
 
@@ -65,7 +67,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
     curl -fsSL https://ollama.com/install.sh | sh
 
 # Copy the pre-built Ollama models from the builder stage.
-# This is the key step that saves space and time.
 COPY --from=builder /root/.ollama/models /root/.ollama/models
 
 # Copy the final application code and dependencies
@@ -78,4 +79,5 @@ RUN chmod +x ./start.sh
 
 EXPOSE 8000
 CMD ["./start.sh"]
+
 
