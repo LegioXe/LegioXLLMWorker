@@ -27,21 +27,20 @@ WORKDIR /app
 COPY modelfiles/ /app/modelfiles/
 
 # Download, create models, and then clean up
+# CORRECTED: Added --progress-bar (-#) to curl for better real-time feedback
 RUN /bin/bash -c "set -e && \
     mkdir -p /tmp/models && \
+    CURL_OPTS='--fail -L --retry 3 --retry-delay 5 --connect-timeout 20 -# -H \"Authorization: Bearer $HF_TOKEN\"' && \
+    \
     echo '--- Downloading Models ---' && \
-    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf' -o /tmp/models/phi3-mini.gguf && \
-    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-small.gguf && \
-    curl --fail -L -H \"Authorization: Bearer $HF_TOKEN\" 'https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-medium.gguf && \
+    curl \$CURL_OPTS 'https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf' -o /tmp/models/phi3-mini.gguf && \
+    curl \$CURL_OPTS 'https://huggingface.co/TheBloke/Phi-3-small-8k-instruct-GGUF/resolve/main/phi-3-small-8k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-small.gguf && \
+    curl \$CURL_OPTS 'https://huggingface.co/TheBloke/Phi-3-medium-4k-instruct-GGUF/resolve/main/phi-3-medium-4k-instruct.q5_k_m.gguf' -o /tmp/models/phi3-medium.gguf && \
     \
     echo '--- Creating Ollama models ---' && \
     ollama serve & \
-    \
-    # CORRECTED: Actively wait for the server to be ready instead of a fixed sleep
     echo 'Waiting for Ollama server to start...' && \
-    while ! curl -s -f http://127.0.0.1:11434/ > /dev/null; do \
-        echo -n '.' && sleep 1; \
-    done && \
+    while ! curl -s -f http://127.0.0.1:11434/ > /dev/null; do echo -n '.' && sleep 1; done && \
     echo 'Ollama server is ready.' && \
     \
     ollama create ${PHI3_MINI_MODEL} -f /app/modelfiles/Phi3Mini.Modelfile && \
@@ -79,5 +78,4 @@ RUN chmod +x ./start.sh
 
 EXPOSE 8000
 CMD ["./start.sh"]
-
 
