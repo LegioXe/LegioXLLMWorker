@@ -1,11 +1,7 @@
 # .github/workflows/build-llm-worker.yml
 
-name: Build and Push LLM Worker Image
+name: Build and Push LLM Worker Image (GPT-OSS-20b)
 
-# ARCHITECTURAL NOTE: Workflow Triggers
-# 'push' on the 'main' branch runs this workflow automatically on every merge,
-# ensuring your production image is always up-to-date. 'workflow_dispatch'
-# allows you to run this manually from the GitHub Actions tab for testing.
 on:
   push:
     branches: [ main ]
@@ -13,42 +9,29 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest-large
+    # Use a standard runner to test the build limits.
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        # Buildx is a Docker component that enables advanced features like building for
-        # multiple architectures and improved caching, which is essential for large images.
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        # This step securely logs into Docker Hub using secrets configured in your
-        # GitHub repository, never exposing your credentials in the logs.
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push LLM Worker
-        # ARCHITECTURAL NOTE: Caching and Multi-Tagging
-        # The 'cache-from' and 'cache-to' settings are a critical optimization that
-        # leverages Docker layer caching, drastically speeding up subsequent builds.
-        # We also push two tags: 'latest' for general use and the unique Git SHA
-        # for precise version tracking and rollbacks.
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./llm-worker.Dockerfile
           push: true
-          # CORRECTED: Use your actual Docker Hub repository name.
           tags: |
-            scarymonkey/aios-llm-worker:latest
-            scarymonkey/aios-llm-worker:${{ github.sha }}
-          # This 'build-args' line securely passes the HF_TOKEN secret from your
-          # GitHub settings into the Docker build environment.
-          build-args: |
-            HF_TOKEN=${{ secrets.HF_TOKEN }}
+            scarymonkey/aios-llm-worker-gpt-oss:latest
+            scarymonkey/aios-llm-worker-gpt-oss:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
