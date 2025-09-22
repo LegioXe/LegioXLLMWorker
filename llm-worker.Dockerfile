@@ -8,6 +8,10 @@ FROM ollama/ollama
 # that can fit within the build limits of a standard GitHub runner.
 ARG OLLAMA_MODEL_TAG=gpt-oss:20b-instruct-q5_k_m
 
+# Start the server in the background, pull the model, then stop the server.
+RUN /bin/bash -c "ollama serve & sleep 5 && ollama pull ${OLLAMA_MODEL_TAG} && pkill ollama"
+
+
 # Pre-pull the specific model into the image during the build process.
 # This ensures the model is "baked-in" and avoids cold starts on deployment.
 RUN ollama pull ${OLLAMA_MODEL_TAG}
@@ -29,3 +33,4 @@ EXPOSE 8000
 
 # Define the command to start the application at runtime.
 CMD ["./start.sh"]
+
