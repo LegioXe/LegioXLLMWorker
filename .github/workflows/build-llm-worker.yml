@@ -33,5 +33,7 @@ jobs:
           tags: |
             scarymonkey/aios-llm-worker-gpt-oss:latest
             scarymonkey/aios-llm-worker-gpt-oss:${{ github.sha }}
+          build-args: |
+            OLLAMA_MODEL_TAG=gpt-oss:20b-instruct-q5_k_m
           cache-from: type=gha
           cache-to: type=gha,mode=max
